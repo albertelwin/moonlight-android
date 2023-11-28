@@ -20,7 +20,6 @@ import com.limelight.LimeLog;
 import com.limelight.R;
 import com.limelight.preferences.PreferenceConfiguration;
 
-import java.io.File;
 import java.util.ArrayList;
 
 public class UsbDriverService extends Service implements UsbDriverListener {
@@ -137,7 +136,7 @@ public class UsbDriverService extends Service implements UsbDriverListener {
 
     private void handleUsbDeviceState(UsbDevice device) {
         // Are we able to operate it?
-        if (shouldClaimDevice(device, prefConfig.bindAllUsb)) {
+        if (shouldClaimAnyInterface(device, prefConfig.bindAllUsb)) {
             // Do we have permission yet?
             if (!usbManager.hasPermission(device)) {
                 // Let's ask for permission
@@ -192,6 +191,9 @@ public class UsbDriverService extends Service implements UsbDriverListener {
             }
             else if (Xbox360WirelessDongle.canClaimDevice(device)) {
                 controller = new Xbox360WirelessDongle(device, connection, nextDeviceId++, this);
+            }
+            else if (BackboneOneButton.canClaimInterface(device)) {
+                controller = new BackboneOneButton(device, connection, nextDeviceId++, this);
             }
             else {
                 // Unreachable
@@ -286,6 +288,10 @@ public class UsbDriverService extends Service implements UsbDriverListener {
                 ((!kernelSupportsXbox360W() || claimAllAvailable) && Xbox360WirelessDongle.canClaimDevice(device));
     }
 
+    public static boolean shouldClaimAnyInterface(UsbDevice device, boolean claimAllAvailable) {
+        return BackboneOneButton.canClaimInterface(device) || shouldClaimDevice(device, claimAllAvailable);
+    }
+
     private void start() {
         if (started || usbManager == null) {
             return;
@@ -306,7 +312,7 @@ public class UsbDriverService extends Service implements UsbDriverListener {
 
         // Enumerate existing devices
         for (UsbDevice dev : usbManager.getDeviceList().values()) {
-            if (shouldClaimDevice(dev, prefConfig.bindAllUsb)) {
+            if (shouldClaimAnyInterface(dev, prefConfig.bindAllUsb)) {
                 // Start the process of claiming this device
                 handleUsbDeviceState(dev);
             }

@@ -448,11 +448,38 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         return true;
     }
 
+    private short getAssignedBackboneOneControllerNumber() {
+        for (int i = 0; i < inputDeviceContexts.size(); i++) {
+            GenericControllerContext context = inputDeviceContexts.valueAt(i);
+            if (context.assignedControllerNumber && context.isBackboneOne()) {
+                return context.controllerNumber;
+            }
+        }
+        for (int i = 0; i < usbDeviceContexts.size(); i++) {
+            GenericControllerContext context = usbDeviceContexts.valueAt(i);
+            if (context.assignedControllerNumber && context.isBackboneOne()) {
+                return context.controllerNumber;
+            }
+        }
+        return -1;
+    }
+
     // Called before sending input but after we've determined that this
     // is definitely a controller (not a keyboard, mouse, or something else)
     private void assignControllerNumberIfNeeded(GenericControllerContext context) {
         if (context.assignedControllerNumber) {
             return;
+        }
+
+        // Ensure Backbone One InputDevice and UsbDevice (Backbone button) are assigned the same controller
+        if (context.isBackboneOne()) {
+            short controllerNumber = getAssignedBackboneOneControllerNumber();
+            if (controllerNumber >= 0) {
+                context.controllerNumber = controllerNumber;
+                context.reservedControllerNumber = prefConfig.multiController;
+                context.assignedControllerNumber = true;
+                return;
+            }
         }
 
         if (context instanceof InputDeviceContext) {
@@ -2890,6 +2917,10 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         public boolean mouseEmulationActive;
         public int mouseEmulationLastInputMap;
         public final int mouseEmulationReportPeriod = 50;
+
+        public final boolean isBackboneOne() {
+            return (vendorId == 0x358A) && (productId == 0x202);
+        }
 
         public final Runnable mouseEmulationRunnable = new Runnable() {
             @Override
