@@ -19,7 +19,6 @@ import java.nio.ByteOrder;
 // Maps both Backbone and screenshot buttons to Xbox Home/Guide button
 public class BackboneOneButton extends AbstractController {
     public static final int VENDOR_ID = 0x358A; // Backbone Labs, Inc.
-    public static final int PRODUCT_ID = 0x202; // Backbone One
 
     protected final UsbDevice device;
     protected final UsbDeviceConnection connection;
@@ -43,10 +42,14 @@ public class BackboneOneButton extends AbstractController {
         screenshotButtonState = 0;
     }
 
-    public static boolean canClaimInterface(UsbDevice device) {
-        if ((device.getVendorId() == VENDOR_ID) && (device.getProductId() == PRODUCT_ID)) // Backbone One
+    public static boolean isBackboneOne(int vendorId, int productId) {
+        if ((vendorId == VENDOR_ID) && ((productId == 0x201) || (productId == 0x202))) // 0x201 = with headphones attached, 0x202 = without
             return true;
         return false;
+    }
+
+    public static boolean canClaimInterface(UsbDevice device) {
+        return isBackboneOne(device.getVendorId(), device.getProductId());
     }
 
     private Thread createInputThread() {
@@ -109,10 +112,19 @@ public class BackboneOneButton extends AbstractController {
     }
 
     public boolean start() {
-        if (device.getInterfaceCount() < 2)
+        // Find Backbone button interface
+        UsbInterface iface = null;
+        for (int i = 0; i < device.getInterfaceCount(); i++) {
+            UsbInterface it = device.getInterface(i);
+            if (it.getInterfaceClass() == 255 && it.getInterfaceSubclass() == 2 && it.getInterfaceProtocol() == 1) {
+                iface = it;
+                break;
+            }
+        }
+
+        if (iface == null)
             return false;
 
-        UsbInterface iface = device.getInterface(1);
         if (!connection.claimInterface(iface, true)) {
             LimeLog.warning("Failed to claim interfaces");
             return false;

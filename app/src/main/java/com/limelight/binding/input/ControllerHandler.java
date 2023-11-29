@@ -36,6 +36,7 @@ import android.widget.Toast;
 import com.limelight.LimeLog;
 import com.limelight.R;
 import com.limelight.binding.input.driver.AbstractController;
+import com.limelight.binding.input.driver.BackboneOneButton;
 import com.limelight.binding.input.driver.UsbDriverListener;
 import com.limelight.binding.input.driver.UsbDriverService;
 import com.limelight.nvstream.NvConnection;
@@ -451,13 +452,13 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
     private short getAssignedBackboneOneControllerNumber() {
         for (int i = 0; i < inputDeviceContexts.size(); i++) {
             GenericControllerContext context = inputDeviceContexts.valueAt(i);
-            if (context.assignedControllerNumber && context.isBackboneOne()) {
+            if (context.assignedControllerNumber && BackboneOneButton.isBackboneOne(context.vendorId, context.productId)) {
                 return context.controllerNumber;
             }
         }
         for (int i = 0; i < usbDeviceContexts.size(); i++) {
             GenericControllerContext context = usbDeviceContexts.valueAt(i);
-            if (context.assignedControllerNumber && context.isBackboneOne()) {
+            if (context.assignedControllerNumber && BackboneOneButton.isBackboneOne(context.vendorId, context.productId)) {
                 return context.controllerNumber;
             }
         }
@@ -472,7 +473,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         }
 
         // Ensure Backbone One InputDevice and UsbDevice (Backbone button) are assigned the same controller
-        if (context.isBackboneOne()) {
+        if (BackboneOneButton.isBackboneOne(context.vendorId, context.productId)) {
             short controllerNumber = getAssignedBackboneOneControllerNumber();
             if (controllerNumber >= 0) {
                 context.controllerNumber = controllerNumber;
@@ -2917,10 +2918,6 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         public boolean mouseEmulationActive;
         public int mouseEmulationLastInputMap;
         public final int mouseEmulationReportPeriod = 50;
-
-        public final boolean isBackboneOne() {
-            return (vendorId == 0x358A) && (productId == 0x202);
-        }
 
         public final Runnable mouseEmulationRunnable = new Runnable() {
             @Override
